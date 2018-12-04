@@ -1,0 +1,18 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+#
+# Added mandatory tags for Dematic I.T. to automatically created Resource Group
+#
+
+- name: "Fish out automatically created nodeResourceGroup"
+  shell: "az aks list --query  [].nodeResourceGroup -o tsv -g {{azure_resource_group}} | grep {{aks_cluster_name}}"
+  register: result
+
+- name: "set node_resource_group"
+  set_fact: node_resource_group="{{result.stdout.split('\n')}}"
+
+- name: "Tag aks cluster RG {{node_resource_group[0]}} in {{azure_location}}"
+  shell: "az group update --name {{node_resource_group[0]}} --tags {{aks_cluster_tags}}"
+  register: result
+
+- debug: var=result

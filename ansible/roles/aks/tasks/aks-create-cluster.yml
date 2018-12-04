@@ -1,0 +1,30 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+#
+# Opinionated Generic wrapper that forces you to specify preexisting subnet
+#
+# It would have been nicer to use ansible module instead of shell since it creates or updates but
+# ansible does not support skip-subnet-role-assignment and vnet-subnet-id. rbac flag added in 2.8 head, not yet released
+# see code https://github.com/Azure/azure_preview_modules/blob/master/library/azure_rm_aks.py
+
+# stick to CLI for greater flexibility for now
+# note tags  do not propagate to the nodes!!!
+- name: "Create aks cluster {{aks_cluster_name}} in {{azure_location}}"
+  shell: "az aks create
+           -g {{azure_resource_group}}
+           -n {{aks_cluster_name}} {{aks_flag_options}}
+           --location {{azure_location}}
+           --kubernetes-version {{aks_kubernetes_version}}
+           --node-count {{aks_cluster_node_count|default(aks_default_min_cluster)}}
+           --nodepool-name {{aks_nodepool_name}}
+           --dns-name-prefix  {{aks_dns_name_prefix}}
+           --service-principal '{{azure_service_principal}}'
+           --client-secret '{{azure_client_secret}}'
+           --admin-username {{azure_admin_user}}
+           --ssh-key-value  '{{azure_admin_user_public_key}}'
+           --network-plugin azure
+           --vnet-subnet-id {{azure_subnet_fq}}
+           --tags {{aks_cluster_tags}}"
+  register: result
+
+- debug: var=result

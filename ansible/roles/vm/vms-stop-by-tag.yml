@@ -1,0 +1,44 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+# stop machine instances based on cluster tag filter criteria {{cluster_tag_name}}={{cluster_tag_value}}.
+# caller inputs:
+#    cluster_tag_name
+#    cluster_tag_value
+#    azure_deallocate_vm - true if you want to stop paying
+# stop vms based on tag, {{cluster_tag_name}}={{cluster_tag_value}}
+#
+
+---
+- hosts: localhost
+  gather_facts: false
+  connection: local
+
+  vars:
+    az_vm_stop_cmd_by_id: "az vm stop --ids"
+  tasks:
+    - name: "Get all instance that match tag filter {{cluster_tag_name}}={{cluster_tag_value}}"
+      include: tasks/get-vms-by-tag.yml
+
+    - name: "Stop machine instance individually and asynchronously since cli executes in sequence"
+      shell: "{{az_vm_stop_cmd_by_id}} {{item}}"
+      with_items: "{{matching_instanceids}}"
+      async: "{{async_task_completion_seconds}}"
+      poll: 0
+      register: async_results
+
+    - name: "Check async results"
+      include: tasks/check-async-results.yml status_test_retries=300
+
+    - block:
+      - name: "Deallocate machine instance individually and asynchronously since cli does it it sequence"
+        shell: "az vm deallocate --ids {{item}}"
+        with_items: "{{matching_instanceids}}"
+        async: "{{async_task_completion_seconds}}"
+        poll: 0
+        register: async_results
+
+      - name: Check sync status
+        include: tasks/check-async-results.yml status_test_retries=300
+      when: azure_deallocate_vm
+
+

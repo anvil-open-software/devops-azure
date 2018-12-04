@@ -1,0 +1,15 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+#
+# adds logging and monitoring all in 1
+#
+
+# workspace-resource-id has to be fully qualified
+
+- name: "Add monitoring {{aks_cluster_name}} to {{azure_log_workspace}}"
+  shell: "az aks enable-addons
+           -g {{azure_resource_group}}
+           -n {{aks_cluster_name}}
+           --addons monitoring
+           --workspace-resource-id {{azure_log_workspace_fqn}}"
+

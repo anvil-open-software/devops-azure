@@ -1,0 +1,46 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+---
+- hosts: localhost
+  gather_facts: false
+  connection: local
+
+# to run locally:
+# ansible-playbook -i /dematic/gitazure/devops-config/ansible/roles/kafka/inventory/kafka-devops-cluster -c local  machine-cluster-start-async.yml --private-key /dematic/keys/google/gcp-devops -u devops
+
+
+ # start machine instances based on cluster tag filter criteria. will wait if any of them are in stopped state.
+ # caller inputs:
+ # cluster_tag_name and cluster_tag_value
+
+ # actual cli   is using something like:
+#  az resource list --tag "kafka-cluster-id=devops" --query "[?type=='Microsoft.Compute/virtualMachines'].id" -o tsv
+##
+  vars:
+    az_vm_start_cmd_by_id: "az vm start --ids"
+  tasks:
+    - name: "Get all instance that match tag filter {{cluster_tag_name}}={{cluster_tag_value}}"
+      include: tasks/get-vms-by-tag.yml
+
+    # couldn't get the az cli to return sublist, so sublist in ansible instead
+    - name: "limit max vms to start by {{max_vms_to_start}}"
+      set_fact: instanceids="{{matching_instanceids[:max_vms_to_start|default(matching_instanceids|length)]}}"
+
+    - name: "Following vms will be started asynchronously for instance ids "
+      debug: msg="{{az_vm_start_cmd_by_id}} {{ instanceids }}"
+
+ # instance change disabled since we have the fear fo not being able to allocate desired size
+ #   - name: "instances types will be changed"
+ #     include: tasks/azure-vm-resize.yml
+ #     when: change_vm_instance_type is defined and change_vm_instance_type
+
+    - name: "Start machine instance individually and asynchronously since cli currently executes in sequence"
+      shell: "{{az_vm_start_cmd_by_id}} {{item}}"
+      with_items: "{{instanceids}}"
+      async: "{{async_task_completion_seconds}}"
+      poll: 0
+      register: async_results
+
+    - name: "Check async results"
+      include: tasks/check-async-results.yml status_test_retries=300
+

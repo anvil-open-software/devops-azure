@@ -1,0 +1,44 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+---
+# generic wrapper for managing a AKS cluster- create,delete update
+# with flags
+#    aks_delete_cluster
+#    aks_create_cluster
+#    aks_enable_logging - however the azure_log_workspace_fqn must exist before
+#
+# Play not made tasks/main.yml since it is NOT idempotent
+# Runs on localhost or where az cli is installed
+#
+- hosts: localhost
+  tasks:
+    - name: "Load global vars {{azure_global_var_file}}"
+      include_vars: "{{azure_global_var_file}}"
+
+    # for convinience, AKS files specify subnet profile
+    #    and hence will not be able to override anything in the subnet profile
+    - name: " Load AKS vars {{aks_var_file}}"
+      include_vars: "{{aks_var_file}}"
+
+    - name: "Load network profile vars {{azure_subnet_profile}}"
+      include_vars: "{{azure_resource_group_var_dir}}/{{azure_subnet_profile}}"
+
+    - name: "Delete AKS cluster"
+      include: tasks/aks-delete-cluster.yml
+      when: aks_delete_cluster is defined and aks_delete_cluster
+
+    - name: "Create AKS cluster"
+      include: tasks/aks-create-cluster.yml
+      vars:
+        azure_subnet_fq: "{{azure_vnet_fq}}/subnets/{{azure_subnet_name}}"
+        aks_flag_options: "--debug --disable-rbac --skip-subnet-role-assignment"
+      when: aks_create_cluster
+
+    - name: "tag AKS cluster"
+      include: tasks/aks-tag-cluster.yml
+
+    - name: "Connect Logging to {{azure_log_workspace_fqn}}"
+      include: tasks/aks-enable-logging.yml
+      vars:
+        azure_log_workspace_fqn: "{{azure_resource_group_fq}}/{{azure_insights_workspace_url_prefix}}/{{azure_log_workspace}}"
+      when: aks_enable_logging is defined and aks_enable_logging

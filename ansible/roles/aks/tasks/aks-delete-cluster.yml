@@ -1,0 +1,13 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+#
+#
+# This could be done from the Portal but is used for automating cluster recreation
+# so you don't have to wait around...
+#
+
+- name: "Delete aks cluster {{aks_cluster_name}}"
+  shell: "az aks delete -y
+           -g {{azure_resource_group}}
+           -n {{aks_cluster_name}}"
+

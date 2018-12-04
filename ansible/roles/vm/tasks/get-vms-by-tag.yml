@@ -1,0 +1,19 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+#
+# return matching_instanceids : sorted list of matching vms as an array for {{cluster_tag_name}}={{cluster_tag_value}}"
+#
+# fail if nothing returned
+
+
+- name: "Get all instance names with matching {{cluster_tag_name}}={{cluster_tag_value}}"
+  shell: az resource list --tag "{{cluster_tag_name}}={{cluster_tag_value}}" --query "[?type=='Microsoft.Compute/virtualMachines'].id" -o tsv
+  register: result
+
+- name:  "set instanceids to a sorted array if cli returned results"
+  set_fact: matching_instanceids="{{result.stdout.split('\n')|sort}}"
+  when: (result.stdout|length) > 1
+
+- name: "Fail if no vms matched filter"
+  fail: msg="No vms matched tags {{cluster_tag_name}}={{cluster_tag_value}}. Please check filter value."
+  when: matching_instanceids is not defined

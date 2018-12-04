@@ -1,0 +1,9 @@
+# Copyright 2018 Dematic, Corp.
+# Licensed under the MIT Open Source License: https://opensource.org/licenses/MIT
+
+# most of the vars are defined in a separate config repo to keep this generic
+
+aks_default_node_pool_vm_size: Standard_D2_v2
+aks_default_min_cluster: 2
+
+azure_insights_workspace_url_prefix: "providers/Microsoft.OperationalInsights/workspaces"
